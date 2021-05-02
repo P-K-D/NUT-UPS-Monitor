@@ -1,5 +1,5 @@
 /**
- *  NUT UPS Driver for Hubitat Elevation v1.3
+ *  NUT UPS Driver for Hubitat Elevation v1.4
  *
  *  Child driver for the NUT UPS Monitor app.  A child UPS device is created automatically after installing and
  *  configuring the settings in the NUT UPS Monitor application.
@@ -19,6 +19,12 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  ***************************************************************
+ *  *  21-05-02 updates by PKD                                    *
+ *  *                                                             *
+ *  *  - added load attribute                                     *
+ *  *  - patch to eliminate excess log warnings in HE f/w v2.2.6+ *
+ *  ***************************************************************
  */
 
 import groovy.transform.Field
@@ -39,6 +45,8 @@ metadata {
 	attribute "deviceAlarm", "String"
 	attribute "batteryRuntime", "String"
 	attribute "upsStatus", "String"
+    //load attribute added 21-05-02 by PKD
+    attribute "load", "String"
 
 	preferences {
         input name: "nutServerHost", type: "text", description: "IP or hostname of NUT server", title: "NUT server hostname"
@@ -133,7 +141,8 @@ def refresh() {
 			}
 			runIn(nutPollingInterval, refresh)
 		}
-		sendCommand("LOGOUT")
+        //comment 21-05-02 by PKD: sendCommand("LOGOUT") removed to eliminate excess log warnings in HE f/w v2.2.6+
+		//sendCommand("LOGOUT")
 	}
 }
 
@@ -198,6 +207,12 @@ def parseValues(String[] msg) {
 		case "ups.alarm":
 			result << createEvent(name: 'deviceAlarm', value: value, descriptionText: "Device alarm is ${value}")
 			break;
+        //ups.load added 21-05-02 by PKD
+        case "ups.load":
+            def load = Integer.parseInt(value) + "%"
+            state.load = load
+            result << createEvent(name: 'load', value: value, unit: "%", descriptionText: "Device load is ${value}%")
+            break;
 		case "ups.status":
 			def statuses = value.split(" ")
 			def powerSource = "unknown"
